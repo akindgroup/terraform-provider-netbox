@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceScaffolding() *schema.Resource {
+func resourceIPAMAvailableIPAddress() *schema.Resource {
 	return &schema.Resource{
 		// This description is used by the documentation generator and the language server.
 		Description: "Sample resource in the Terraform provider scaffolding.",
