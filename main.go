@@ -5,8 +5,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/academicwork/terraform-provider-netbox/internal/provider"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
-	"github.com/hashicorp/terraform-provider-scaffolding/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
@@ -29,7 +29,7 @@ func main() {
 	flag.Parse()
 	opts := &plugin.ServeOpts{ProviderFunc: provider.New(version)}
 	if debugMode {
-		err := plugin.Debug(context.Background(), "registry.terraform.io/academicwork/netbox", opts)
+		err := plugin.Debug(context.Background(), "registry.terraform.io/academicwork/terraform-provider-netbox", opts)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
