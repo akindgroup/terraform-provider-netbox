@@ -7,26 +7,25 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccDataSourceScaffolding(t *testing.T) {
-	t.Skip("data source not yet implemented, remove this once you add your own code")
-
+func TestDataSourceIpamPrefixRead(t *testing.T) {
 	resource.UnitTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDataSourceScaffolding,
+				Config: testDataSourceIpamPrefixRead,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr(
-						"data.scaffolding_data_source.foo", "sample_attribute", regexp.MustCompile("^ba")),
+						"data.netbox_ipam_prefix.foo", "cidr", regexp.MustCompile("^ba")),
 				),
 			},
 		},
 	})
 }
 
-const testAccDataSourceScaffolding = `
-data "scaffolding_data_source" "foo" {
-  sample_attribute = "bar"
+const testDataSourceIpamPrefixRead = `
+data "netbox_ipam_prefix" "foo" {
+  site = "foo"
+  region = "bar"
 }
 `
