@@ -52,7 +52,7 @@ func dataSourceIpamPrefixRead(ctx context.Context, d *schema.ResourceData, m int
 	}
 	prefix, err := c.GetIPAMPrefix(ctx, site, region)
 	if err != nil {
-		return diag.Errorf("failed to get prefix from netbox: %w", err)
+		return diag.Errorf("failed to get prefix from netbox: %v", err)
 	}
 	d.SetId(prefix.ID)
 	d.Set("cidr", prefix.CIDR)
