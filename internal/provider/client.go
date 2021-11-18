@@ -20,24 +20,7 @@ type httpClient struct {
 }
 
 func (c *httpClient) GetIPAMPrefix(ctx context.Context, site, region string) (*IPAMPrefix, error) {
-	url := fmt.Sprintf("%s/api/ipam/prefixes?region=%s&site=%s&format=json", c.host, region, site)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Add("Authorization", fmt.Sprintf("Token %s", c.token))
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call netbox for prefix: %w", err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read prefix response body: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to call netbox for prefix, expected status 200, got %d, body: %s", resp.StatusCode, body)
-	}
+	url := fmt.Sprintf("%s/api/ipam/prefixes?region=%s&site=%s", c.host, region, site)
 	type prefixAPIResponse struct {
 		Count   int `json:"count"`
 		Results []struct {
@@ -46,8 +29,8 @@ func (c *httpClient) GetIPAMPrefix(ctx context.Context, site, region string) (*I
 		} `json:"results"`
 	}
 	var prefixResponse prefixAPIResponse
-	if err := json.Unmarshal(body, &prefixResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal json prefix response body: %w, body: %s", err, body)
+	if err := c.call(ctx, url, http.MethodGet, nil, http.StatusOK, &prefixResponse); err != nil {
+		return nil, fmt.Errorf("failed to get available ip address from prefix: %w", err)
 	}
 	if prefixResponse.Count < 1 {
 		return nil, fmt.Errorf("prefix not found in region: %s and site: %s", region, site)
@@ -64,156 +47,100 @@ func (c *httpClient) GetIPAMPrefix(ctx context.Context, site, region string) (*I
 func (c *httpClient) CreateAvailableIPAddress(ctx context.Context, prefix_id, dns_name string) (*PrefixIPAddress, error) {
 	c.Lock()
 	defer c.Unlock()
-	url := fmt.Sprintf("%s/api/ipam/prefixes/%s/available-ips/", c.host, prefix_id) // Trailing slash needed
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader([]byte(fmt.Sprintf(`[{"dns_name": "%s"}]`, dns_name))))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Token %s", c.token))
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call netbox for available ip addresses for prefix id: %s %w", prefix_id, err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read available ip addresses for prefix id: %s, response body: %w", prefix_id, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("failed to call netbox for available ip addresses for prefix id: %s, expected status %d, got %d, body: %s", prefix_id, http.StatusCreated, resp.StatusCode, body)
-	}
-
+	url := fmt.Sprintf("%s/api/ipam/prefixes/%s/available-ips/", c.host, prefix_id)
+	reqbody := []byte(fmt.Sprintf(`[{"dns_name": "%s"}]`, dns_name))
 	var prefixResponse []PrefixIPAddress
-	if err := json.Unmarshal(body, &prefixResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal json available ip addresses response body: %w, body: %s", err, body)
-	}
-	if len(prefixResponse) != 1 {
-		return nil, fmt.Errorf("expected just one ip address in response , got : %d, body: %s", len(prefixResponse), body)
+	if err := c.call(ctx, url, http.MethodPost, reqbody, http.StatusCreated, &prefixResponse); err != nil {
+		return nil, fmt.Errorf("failed to create reserved ip address: %w", err)
 	}
 	prefix := prefixResponse[0]
-
 	if _, _, err := net.ParseCIDR(prefix.Address); err != nil {
-		return nil, fmt.Errorf("failed to parse ip returned from netbox, got %s, error: %w", prefix.Address, err)
+		return nil, fmt.Errorf("failed to parse ip returned from netbox: %s, error: %w", prefix.Address, err)
 	}
 	if prefix.DNSName != dns_name {
-		return nil, fmt.Errorf("dns name returned from netbox was %s, expected: %s", prefix.DNSName, dns_name)
+		return nil, fmt.Errorf("expected returned dns_name: %s, got: %s", dns_name, prefix.DNSName)
 	}
 	if prefix.Status.Value != "active" {
-		return nil, fmt.Errorf("expected ip to be set to active in netbox, got %s, expected: %s", prefix.Status.Value, "active")
+		return nil, fmt.Errorf("expected returned ip address status: active, got %s", prefix.Status.Value)
 	}
 	return &prefix, nil
 }
 
 func (c *httpClient) ReadReservedIPAddress(ctx context.Context, id string) (*PrefixIPAddress, error) {
-	c.Lock()
-	defer c.Unlock()
-
 	url := fmt.Sprintf("%s/api/ipam/ip-addresses/%s/", c.host, id)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Token %s", c.token))
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call netbox for reserved ip address id: %s %w", id, err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read reserved ip address id: %s, response body: %w", id, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to call netbox for reserved ip address id: %s, expected status %d, got %d, body: %s", id, http.StatusOK, resp.StatusCode, body)
-	}
-
 	var prefixResponse PrefixIPAddress
-	if err := json.Unmarshal(body, &prefixResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal json reserved ip address response body: %w, body: %s", err, body)
+	if err := c.call(ctx, url, http.MethodGet, nil, http.StatusOK, &prefixResponse); err != nil {
+		return nil, fmt.Errorf("failed to read reserved ip address: %w", err)
 	}
 	if _, _, err := net.ParseCIDR(prefixResponse.Address); err != nil {
 		return nil, fmt.Errorf("failed to parse ip returned from netbox, got %s, error: %w", prefixResponse.Address, err)
 	}
-
 	if strconv.Itoa(prefixResponse.ID) != id {
-		return nil, fmt.Errorf("expected retrieved id to be %s, got %d", id, prefixResponse.ID)
+		return nil, fmt.Errorf("expected returned id to be %s, got %d", id, prefixResponse.ID)
 	}
 	if prefixResponse.Status.Value != "active" {
-		return nil, fmt.Errorf("expected ip to be set to active in netbox, got %s, expected: %s", prefixResponse.Status.Value, "active")
+		return nil, fmt.Errorf("expected returned ip address status: active, got %s", prefixResponse.Status.Value)
 	}
 	return &prefixResponse, nil
 }
 
 func (c *httpClient) UpdateReservedIPAddress(ctx context.Context, id, ip_address, dns_name string) (*PrefixIPAddress, error) {
-	c.Lock()
-	defer c.Unlock()
-
-	url := fmt.Sprintf("%s/api/ipam/ip-addresses/%s", c.host, id)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewReader([]byte(fmt.Sprintf(`{ "address": "%s", "dns_name": "%s" }`, ip_address, dns_name))))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Token %s", c.token))
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call netbox to update reserved ip address id: %s %w", id, err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update reserved ip address id: %s, response body: %w", id, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to call netbox to update reserved ip address id: %s, expected status %d, got %d, body: %s", id, http.StatusOK, resp.StatusCode, body)
-	}
-
+	url := fmt.Sprintf("%s/api/ipam/ip-addresses/%s/", c.host, id)
+	reqbody := []byte(fmt.Sprintf(`{ "address": "%s", "dns_name": "%s" }`, ip_address, dns_name))
 	var prefixResponse PrefixIPAddress
-	if err := json.Unmarshal(body, &prefixResponse); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal json for reserved ip address response body: %w, body: %s", err, body)
+	if err := c.call(ctx, url, http.MethodPut, reqbody, http.StatusOK, &prefixResponse); err != nil {
+		return nil, fmt.Errorf("failed to updated reserved ip address: %w", err)
 	}
 	if prefixResponse.DNSName != dns_name {
 		return nil, fmt.Errorf("expected updated dns_name to be %s, got %s", dns_name, prefixResponse.DNSName)
 	}
-
 	if strconv.Itoa(prefixResponse.ID) != id {
-		return nil, fmt.Errorf("expected retrieved id to be %s, got %d", id, prefixResponse.ID)
+		return nil, fmt.Errorf("expected returned prefix_id to be %s, got %d", id, prefixResponse.ID)
 	}
 	if prefixResponse.Status.Value != "active" {
-		return nil, fmt.Errorf("expected ip to be set to active in netbox, got %s, expected: %s", prefixResponse.Status.Value, "active")
+		return nil, fmt.Errorf("expected returned ip address status: active, got %s", prefixResponse.Status.Value)
 	}
 	return &prefixResponse, nil
 }
 
 func (c *httpClient) DeleteReservedIPAddress(ctx context.Context, id string) error {
-	c.Lock()
-	defer c.Unlock()
-
 	url := fmt.Sprintf("%s/api/ipam/ip-addresses/%s/", c.host, id)
+	if err := c.call(ctx, url, http.MethodDelete, nil, http.StatusNoContent, nil); err != nil {
+		return fmt.Errorf("failed to delete reserved ip address: %w", err)
+	}
+	return nil
+}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+func (c *httpClient) call(ctx context.Context, url, method string, reqbody []byte, expectedStatusCode int, responseStruct interface{}) error {
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(reqbody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Token %s", c.token))
-
+	if reqbody != nil {
+		req.Header.Add("Content-Type", "application/json")
+	}
 	resp, err := c.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to call netbox to delete reserved ip address id: %s %w", id, err)
+		return fmt.Errorf("failed to call netbox: %w", err)
 	}
-	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("failed to call netbox to delete reserved ip address id: %s, expected status %d, got %d", id, http.StatusNoContent, resp.StatusCode)
+	if expectedStatusCode == http.StatusNoContent &&
+		resp.StatusCode == http.StatusNoContent {
+		return nil
 	}
-
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != expectedStatusCode {
+		return fmt.Errorf("incorrect status code returned, expected status: %d, got: %d, body: %s", expectedStatusCode, resp.StatusCode, body)
+	}
+	if responseStruct != nil {
+		if err := json.Unmarshal(body, &responseStruct); err != nil {
+			return fmt.Errorf("failed to unmarshal json from response, error: %w, body: %s", err, body)
+		}
+	}
 	return nil
 }

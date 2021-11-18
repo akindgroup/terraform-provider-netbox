@@ -55,6 +55,8 @@ func dataSourceIpamPrefixRead(ctx context.Context, d *schema.ResourceData, m int
 		return diag.Errorf("failed to get prefix from netbox: %v", err)
 	}
 	d.SetId(prefix.ID)
-	d.Set("cidr", prefix.CIDR)
+	if err := d.Set("cidr", prefix.CIDR); err != nil {
+		return diag.Errorf("failed to set cidr value of ipam prefix: %v", err)
+	}
 	return diags
 }

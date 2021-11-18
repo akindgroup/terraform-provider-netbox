@@ -18,14 +18,11 @@ description: |-
 ### Required
 
 - **dns_name** (String)
-- **prefix_id** (Number)
-
-### Optional
-
-- **id** (String) The ID of this resource.
+- **prefix_id** (String)
 
 ### Read-Only
 
+- **id** (String) The ID of this resource.
 - **ip_address** (String)
 
 

@@ -65,8 +65,12 @@ func resourceAvailableIPAddressCreate(ctx context.Context, d *schema.ResourceDat
 	}
 
 	d.SetId(strconv.Itoa(ip.ID))
-	d.Set("ip_address", ip.Address)
-	d.Set("dns_name", ip.DNSName)
+	if err := d.Set("ip_address", ip.Address); err != nil {
+		return diag.Errorf("failed to set cidr value of ipam prefix: %v", err)
+	}
+	if err := d.Set("dns_name", ip.DNSName); err != nil {
+		return diag.Errorf("failed to set dns_name value of ipam prefix: %v", err)
+	}
 	return nil
 }
 
@@ -85,8 +89,12 @@ func resourceAvailableIPAddressRead(ctx context.Context, d *schema.ResourceData,
 		return diag.Errorf("failed to read reserved ip address from netbox: %v", err)
 	}
 	d.SetId(strconv.Itoa(ip.ID))
-	d.Set("ip_address", ip.Address)
-	d.Set("dns_name", ip.DNSName)
+	if err := d.Set("ip_address", ip.Address); err != nil {
+		return diag.Errorf("failed to set cidr value of ipam prefix: %v", err)
+	}
+	if err := d.Set("dns_name", ip.DNSName); err != nil {
+		return diag.Errorf("failed to set dns_name value of ipam prefix: %v", err)
+	}
 	return nil
 }
 
@@ -113,8 +121,12 @@ func resourceAvailableIPAddressUpdate(ctx context.Context, d *schema.ResourceDat
 		return diag.Errorf("failed to update reserved ip address in netbox: %v", err)
 	}
 	d.SetId(strconv.Itoa(ip.ID))
-	d.Set("ip_address", ip.Address)
-	d.Set("dns_name", ip.DNSName)
+	if err := d.Set("ip_address", ip.Address); err != nil {
+		return diag.Errorf("failed to set cidr value of ipam prefix: %v", err)
+	}
+	if err := d.Set("dns_name", ip.DNSName); err != nil {
+		return diag.Errorf("failed to set dns_name value of ipam prefix: %v", err)
+	}
 	return nil
 }
 
