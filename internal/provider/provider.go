@@ -43,7 +43,9 @@ func New(version string) func() *schema.Provider {
 			DataSourcesMap: map[string]*schema.Resource{
 				"netbox_ipam_prefix": dataSourceIPAMPrefix(),
 			},
-			ResourcesMap: map[string]*schema.Resource{},
+			ResourcesMap: map[string]*schema.Resource{
+				"netbox_available_ip": resourceAvailableIPAddress(),
+			},
 		}
 		p.ConfigureContextFunc = configure
 		return p
@@ -51,7 +53,7 @@ func New(version string) func() *schema.Provider {
 }
 
 func configure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	return &httpclient{
+	return &httpClient{
 		host:  d.Get("host").(string),
 		token: d.Get("token").(string),
 		Client: &http.Client{

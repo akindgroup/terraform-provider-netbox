@@ -38,7 +38,7 @@ func dataSourceIPAMPrefix() *schema.Resource {
 
 func dataSourceIpamPrefixRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	var diags diag.Diagnostics
-	c, ok := m.(*httpclient)
+	c, ok := m.(*httpClient)
 	if !ok {
 		return diag.Errorf("expected a http client for netbox, got: %v", c)
 	}
