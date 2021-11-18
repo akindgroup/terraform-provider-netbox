@@ -15,8 +15,8 @@ func TestAccDataSourceIpamPrefixRead(t *testing.T) {
 			{
 				Config: testDataSourceIpamPrefixRead,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr(
-						"data.netbox_ipam_prefix.foo", "cidr", regexp.MustCompile("^ba")),
+					resource.TestMatchResourceAttr("data.netbox_ipam_prefix.foo", "id", regexp.MustCompile(`59`)),
+					resource.TestMatchResourceAttr("data.netbox_ipam_prefix.foo", "cidr", regexp.MustCompile(`10.34.0.0/21`)),
 				),
 			},
 		},
@@ -25,7 +25,7 @@ func TestAccDataSourceIpamPrefixRead(t *testing.T) {
 
 const testDataSourceIpamPrefixRead = `
 data "netbox_ipam_prefix" "foo" {
-  site = "foo"
-  region = "bar"
+  site = "dev-hz1"
+  region = "helsinki"
 }
 `

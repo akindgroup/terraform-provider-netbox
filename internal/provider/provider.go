@@ -36,30 +36,22 @@ func New(version string) func() *schema.Provider {
 				},
 				"token": {
 					Type:        schema.TypeString,
-					Optional:    true,
+					Required:    true,
 					DefaultFunc: schema.EnvDefaultFunc("NETBOX_TOKEN", nil),
 				},
 			},
 			DataSourcesMap: map[string]*schema.Resource{
 				"netbox_ipam_prefix": dataSourceIPAMPrefix(),
 			},
-			ResourcesMap: map[string]*schema.Resource{
-				"netbox_ipam_available_ip_address": resourceIPAMAvailableIPAddress(),
-			},
+			ResourcesMap: map[string]*schema.Resource{},
 		}
 		p.ConfigureContextFunc = configure
 		return p
 	}
 }
 
-type netboxHTTPClient struct {
-	host  string
-	token string
-	*http.Client
-}
-
 func configure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	return &netboxHTTPClient{
+	return &httpclient{
 		host:  d.Get("host").(string),
 		token: d.Get("token").(string),
 		Client: &http.Client{
