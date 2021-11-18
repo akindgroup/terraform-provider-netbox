@@ -198,7 +198,7 @@ func (c *httpClient) DeleteReservedIPAddress(ctx context.Context, id string) err
 	c.Lock()
 	defer c.Unlock()
 
-	url := fmt.Sprintf("%s/api/ipam/ip-addresses/%s", c.host, id)
+	url := fmt.Sprintf("%s/api/ipam/ip-addresses/%s/", c.host, id)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
