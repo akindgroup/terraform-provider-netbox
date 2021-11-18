@@ -26,7 +26,7 @@ func resourceAvailableIPAddress() *schema.Resource {
 		DeleteContext: resourceAvailableIPAddressDelete,
 		Schema: map[string]*schema.Schema{
 			"prefix_id": {
-				Type:     schema.TypeInt,
+				Type:     schema.TypeString,
 				Required: true,
 			},
 			"dns_name": {
@@ -78,7 +78,7 @@ func resourceAvailableIPAddressRead(ctx context.Context, d *schema.ResourceData,
 
 	ip, err := c.ReadReservedIPAddress(ctx, id)
 	if err != nil {
-		return diag.Errorf("failed to reserve ip address in netbox: %v", err)
+		return diag.Errorf("failed to read reserved ip address from netbox: %v", err)
 	}
 	d.SetId(strconv.Itoa(ip.ID))
 	d.Set("ip_address", ip.Address)

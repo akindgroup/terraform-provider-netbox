@@ -64,13 +64,14 @@ func (c *httpClient) GetIPAMPrefix(ctx context.Context, site, region string) (*I
 func (c *httpClient) CreateAvailableIPAddress(ctx context.Context, prefix_id, dns_name string) (*PrefixIPAddress, error) {
 	c.Lock()
 	defer c.Unlock()
-	url := fmt.Sprintf("%s/api/ipam/prefixes/%s/available-ips", c.host, prefix_id)
+	url := fmt.Sprintf("%s/api/ipam/prefixes/%s/available-ips/", c.host, prefix_id) // Trailing slash needed
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader([]byte(fmt.Sprintf(`[{"dns_name": "%s"}]`, dns_name))))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Token %s", c.token))
 
 	resp, err := c.Do(req)
@@ -86,20 +87,25 @@ func (c *httpClient) CreateAvailableIPAddress(ctx context.Context, prefix_id, dn
 		return nil, fmt.Errorf("failed to call netbox for available ip addresses for prefix id: %s, expected status %d, got %d, body: %s", prefix_id, http.StatusCreated, resp.StatusCode, body)
 	}
 
-	var prefixResponse PrefixIPAddress
+	var prefixResponse []PrefixIPAddress
 	if err := json.Unmarshal(body, &prefixResponse); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal json available ip addresses response body: %w, body: %s", err, body)
 	}
-	if _, _, err := net.ParseCIDR(prefixResponse.Address); err != nil {
-		return nil, fmt.Errorf("failed to parse ip returned from netbox, got %s, error: %w", prefixResponse.Address, err)
+	if len(prefixResponse) != 1 {
+		return nil, fmt.Errorf("expected just one ip address in response , got : %d, body: %s", len(prefixResponse), body)
 	}
-	if prefixResponse.DNSName != dns_name {
-		return nil, fmt.Errorf("dns name returned from netbox was %s, expected: %s", prefixResponse.DNSName, dns_name)
+	prefix := prefixResponse[0]
+
+	if _, _, err := net.ParseCIDR(prefix.Address); err != nil {
+		return nil, fmt.Errorf("failed to parse ip returned from netbox, got %s, error: %w", prefix.Address, err)
 	}
-	if prefixResponse.Status.Value != "active" {
-		return nil, fmt.Errorf("expected ip to be set to active in netbox, got %s, expected: %s", prefixResponse.Status.Value, "active")
+	if prefix.DNSName != dns_name {
+		return nil, fmt.Errorf("dns name returned from netbox was %s, expected: %s", prefix.DNSName, dns_name)
 	}
-	return &prefixResponse, nil
+	if prefix.Status.Value != "active" {
+		return nil, fmt.Errorf("expected ip to be set to active in netbox, got %s, expected: %s", prefix.Status.Value, "active")
+	}
+	return &prefix, nil
 }
 
 func (c *httpClient) ReadReservedIPAddress(ctx context.Context, id string) (*PrefixIPAddress, error) {
