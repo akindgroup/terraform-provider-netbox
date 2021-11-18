@@ -1,6 +1,6 @@
 module github.com/academicwork/terraform-provider-netbox
 
-go 1.16
+go 1.15
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.5.1
