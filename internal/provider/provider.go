@@ -30,7 +30,8 @@ func New(version string) func() *schema.Provider {
 				},
 				"tls_verify": {
 					Type:        schema.TypeBool,
-					Required:    true,
+					Optional:    true,
+					Default:     true,
 					DefaultFunc: schema.EnvDefaultFunc("NETBOX_TLS_VERIFY", nil),
 				},
 			},
