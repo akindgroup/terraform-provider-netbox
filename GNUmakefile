@@ -1,6 +1,6 @@
 GOOS=$(shell uname | awk '{print tolower($$0)}')
 GOARCH=amd64
-TERRAFORM_PLUGIN_DIR=$(HOME)/.terraform.d/plugins/academicwork/netbox/0.1.1/${GOOS}_${GOARCH}
+TERRAFORM_PLUGIN_DIR=$(HOME)/.terraform.d/plugins/academicwork/netbox/dev/${GOOS}_${GOARCH}
 default: testacc
 .PHONY: testacc build_dev
 testacc:

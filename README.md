@@ -61,7 +61,7 @@ $ make build_dev
 ```hcl
 provider_installation {
   dev_overrides {
-    "academicwork/netbox" = "/home/YOUR-USERNAME/.terraform.d/plugins/academicwork/netbox/0.1.0/YOUR-ARCHITECHTURE/" # architecture could be linux_amd64 for example
+    "academicwork/netbox" = "/home/YOUR-USERNAME/.terraform.d/plugins/academicwork/netbox/dev/YOUR-ARCHITECHTURE/" # architecture could be linux_amd64 for example
   }
   direct {}
 }
