@@ -19,7 +19,7 @@ func TestAccResourceAvailableIP(t *testing.T) {
 			{
 				Config: testAccResourceAvailableIPConfigBasic(site, region, dns_name),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckAvailableIPExists("netbox_available_ip.bar"),
+					testAccCheckAvailableIPExists("netbox_ipam_available_ip.bar"),
 				),
 			},
 		},
@@ -32,7 +32,7 @@ data "netbox_ipam_prefix" "foo" {
   site = "%s"
   region = "%s"
 }
-resource "netbox_available_ip" "bar" {
+resource "netbox_ipam_available_ip" "bar" {
   prefix_id     = data.netbox_ipam_prefix.foo.id
   dns_name 		= "%s"
 }
@@ -42,7 +42,7 @@ resource "netbox_available_ip" "bar" {
 func testAccCheckAvailableIPDestroy(s *terraform.State) error {
 	c := testAccProvider.Meta().(*httpClient)
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "netbox_available_ip" {
+		if rs.Type != "netbox_ipam_available_ip" {
 			continue
 		}
 		prefix, err := c.ReadReservedIPAddress(context.Background(), rs.Primary.ID)

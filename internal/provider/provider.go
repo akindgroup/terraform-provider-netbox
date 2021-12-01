@@ -38,7 +38,7 @@ func New(version string) func() *schema.Provider {
 				"netbox_ipam_prefix": dataSourceIPAMPrefix(),
 			},
 			ResourcesMap: map[string]*schema.Resource{
-				"netbox_available_ip": resourceAvailableIPAddress(),
+				"netbox_ipam_available_ip": resourceAvailableIPAddress(),
 			},
 		}
 		p.ConfigureContextFunc = configure
